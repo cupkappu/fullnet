@@ -1,0 +1,78 @@
+{
+    "MainKey": "mykey",
+    "asnPrefix": "410",
+    "SSHKeyfile": "./",
+    "Preshare-key": "Middle",
+    "CoreNodes":[
+        {
+            "id": "myhost1",
+            "router_id": "这是节点1的router-id",
+            "ip": "这是节点1的公网IP",
+            "privateKey": "",
+            "linkto-port": "节点1的向外连接端口",
+            "asn": "4266660001", 
+            "linkType": "nat", 
+            "natSetting":{
+                "wgPort":{
+                    "wanPort":"17777",
+                    "lanPort":"17778"
+                }
+            },
+            "network4":[
+                "这是节点1的4网络12222",
+                "这是节点1的4网络2"
+            ],
+            "network6":[
+                "这是节点1的6网络1",
+                "这是节点1的6网络2"
+            ],
+            "controlMethod": "url",
+            "sshSetting":{
+                "address":"{连接ssh的地址}",
+                "port": 22,
+                "user":"{SSH的用户}"
+            },
+            "urlupSetting":{
+                "apiURL":"{连接api的地址}"
+            }
+        },
+        {
+            "id": "myhost2",
+            "router_id": "这是节点2的router-id",
+            "ip": "这是节点2的公网IP",
+            "network4":[
+                "这是节点2的4网络1",
+                "这是节点2的4网络2"
+            ],
+            "network6":[
+                "这是节点2的6网络1",
+                "这是节点2的6网络2"
+            ],
+            "controlMethod": "ssh",
+            "sshSetting":{
+                "address":"{连接ssh的地址}",
+                "port":"{连接ssh的端口}",
+                "user":"{SSH的用户}"
+            }
+        },
+        {
+            "id": "myhost3",
+            "router_id": "这是节点3的router-id",
+            "ip": "这是节点3的公网IP",
+            "network4":[
+                "这是节点3的4网络1",
+                "这是节点3的4网络2"
+            ],
+            "network6":[
+                "这是节点3的6网络1",
+                "这是节点3的6网络2"
+            ],
+            "controlMethod": "ssh",
+            "sshSetting":{
+                "address":"{连接ssh的地址}",
+                "port":"{连接ssh的端口}",
+                "user":"{SSH的用户}"
+            }
+        }
+    ]
+}
