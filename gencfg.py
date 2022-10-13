@@ -170,9 +170,9 @@ class nodeItem:
             try: 
                 i['controlMethod']
             except KeyError:
-                controlMethod_exists=False
+                self.nodes[count_var].controlMethod_exists=False
             else:
-                controlMethod_exists=True
+                self.nodes[count_var].controlMethod_exists=True
                 if i['controlMethod'] == 'ssh':
                     self.nodes[count_var].sshSetting = i['sshSetting']
                 if i['controlMethod'] == 'url':
@@ -214,100 +214,100 @@ class nodeItem:
         frrDefaultPath="/etc/frr/"
         wireguardDefaultPath="/etc/wireguard/"
         for i in self.nodes:
-            if i.noSystemd:
-                commands=[
-                    'service frr reload'
-                ]
-            else:
-                commands=[
-                    'systemctl reload frr'
-                ]
-            commandsAll=''
-            if self.haveNatcore:
-                commands.append('wg-quick down nat-mesh; wg-quick up nat-mesh')
-            for x in i.wgfiles:
-                #commands.append('cat > /etc/wireguard/'+x['Peer']+'.conf << EOF\n'+x['Config']+'\nEOF')
-                commands.append('wg-quick down '+x['Peer']+'; wg-quick up '+x['Peer'])
-            for x in commands:
-                commandsAll = commandsAll+'\n'+ x
-            if dev_mode == True:
-                print('\n\nDev env...To '+i.CoreID)
-                print('Login address: '+i.sshSetting['user']+"@"+i.sshSetting['address'])
-                print('SSH Port: '+"-p "+str(i.sshSetting['port']))
-                print("Command: "+commandsAll)
-            elif dev_mode == False:
-                if upmode == 'ssh':
-                    ssh = paramiko.SSHClient()
-                    trans = paramiko.Transport((i.sshSetting['address'], i.sshSetting['port']))
-                    pk=paramiko.RSAKey.from_private_key(self.SSHKeyfile)
-                    trans.connect(username=i.sshSetting['user'],pkey=pk)
-                    sftp = paramiko.SFTPClient.from_transport(trans)
-                    for wgfile in i.wgfiles:
-                        sftp.putfo(string_to_file(wgfile['Config'].encode('ascii')),wireguardDefaultPath+wgfile['Peer']+'.conf')
-                    if self.haveNatcore:
-                        natfileconf=i.natConfig(self.nodes)
-                        sftp.putfo(string_to_file(natfileconf.encode('ascii')),wireguardDefaultPath+'nat_mesh.conf')
-                    i.frrConfigcontent=i.frrConfig(i.router_id,self.nodes,i.network4,i.network6)
-                    sftp.putfo(string_to_file(i.frrConfigcontent.encode('ascii')),frrDefaultPath+'/frr.conf')
-                    #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    #ssh.connect(hostname=i.sshSetting['address'],port=i.sshSetting['port'],username=i.sshSetting['user'],pkey=pk)
-                    ssh._transport = trans
-                    for x in commands:
-                        stdin, stdout, stderr = ssh.exec_command(x)
-                        print(stdout.read().decode('utf-8'))
-                        #commandsAll = commandsAll+'\n'+ x+'\n'
-                    trans.close()
-                    
-                    ssh.close()
+            if i.controlMethod_exists:
+                if i.noSystemd:
+                    commands=[
+                        'service frr reload'
+                    ]
+                else:
+                    commands=[
+                        'systemctl reload frr'
+                    ]
+                commandsAll=''
+                if self.haveNatcore:
+                    commands.append('wg-quick down nat-mesh; wg-quick up nat-mesh')
+                for x in i.wgfiles:
+                    #commands.append('cat > /etc/wireguard/'+x['Peer']+'.conf << EOF\n'+x['Config']+'\nEOF')
+                    commands.append('wg-quick down '+x['Peer']+'; wg-quick up '+x['Peer'])
+                for x in commands:
+                    commandsAll = commandsAll+'\n'+ x
+                if dev_mode == True:
+                    print('\n\nDev env...To '+i.CoreID)
+                    print('Login address: '+i.sshSetting['user']+"@"+i.sshSetting['address'])
+                    print('SSH Port: '+"-p "+str(i.sshSetting['port']))
+                    print("Command: "+commandsAll)
+                elif dev_mode == False:
+                    if upmode == 'ssh':
+                        ssh = paramiko.SSHClient()
+                        trans = paramiko.Transport((i.sshSetting['address'], i.sshSetting['port']))
+                        pk=paramiko.RSAKey.from_private_key(self.SSHKeyfile)
+                        trans.connect(username=i.sshSetting['user'],pkey=pk)
+                        sftp = paramiko.SFTPClient.from_transport(trans)
+                        for wgfile in i.wgfiles:
+                            sftp.putfo(string_to_file(wgfile['Config'].encode('ascii')),wireguardDefaultPath+wgfile['Peer']+'.conf')
+                        if self.haveNatcore:
+                            natfileconf=i.natConfig(self.nodes)
+                            sftp.putfo(string_to_file(natfileconf.encode('ascii')),wireguardDefaultPath+'nat_mesh.conf')
+                        i.frrConfigcontent=i.frrConfig(i.router_id,self.nodes,i.network4,i.network6)
+                        sftp.putfo(string_to_file(i.frrConfigcontent.encode('ascii')),frrDefaultPath+'/frr.conf')
+                        #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                        #ssh.connect(hostname=i.sshSetting['address'],port=i.sshSetting['port'],username=i.sshSetting['user'],pkey=pk)
+                        ssh._transport = trans
+                        for x in commands:
+                            stdin, stdout, stderr = ssh.exec_command(x)
+                            print(stdout.read().decode('utf-8'))
+                            #commandsAll = commandsAll+'\n'+ x+'\n'
+                        trans.close()
+                        
+                        ssh.close()
 
-                    # 此处有BUG，只能循环一次便无法使用
-                if upmode == 'url':
-                    # 含有auth、upload、apply三个api方法
+                        # 此处有BUG，只能循环一次便无法使用
+                    if upmode == 'url':
+                        # 含有auth、upload、apply三个api方法
 
-                    # 获取Token
-                    loginAuth = {"login":self.Preshare_key}
-                    tokenjson=requests.get(i.urlupSetting['apiURL']+"/auth",loginAuth).content
-                    print(tokenjson)
-                    if json.loads(tokenjson)['status'] == 'fail':
-                        print('Wrong key!')
-                        return 1
-                    token=json.loads(tokenjson)['token']
-                    print(token)
-                    # 上传文件
-                    for wgfile in i.wgfiles: # WGfile upload
+                        # 获取Token
+                        loginAuth = {"login":self.Preshare_key}
+                        tokenjson=requests.get(i.urlupSetting['apiURL']+"/auth",loginAuth).content
+                        print(tokenjson)
+                        if json.loads(tokenjson)['status'] == 'fail':
+                            print('Wrong key!')
+                            return 1
+                        token=json.loads(tokenjson)['token']
+                        print(token)
+                        # 上传文件
+                        for wgfile in i.wgfiles: # WGfile upload
+                            uploadInfo = {
+                                "token":token,
+                                "location":wireguardDefaultPath+wgfile['Peer']+'.conf',
+                                "fileBase64":base64.b64encode(wgfile['Config'].encode('ascii'))
+                            }
+                            result=requests.post(i.urlupSetting['apiURL']+"/upload",data=uploadInfo).content
+                            print(result)
+                        if self.haveNatcore:
+                            natfileconf=i.natConfig(self.nodes)
+                            uploadInfo = {
+                                "token":token,
+                                "location":wireguardDefaultPath+'nat_mesh.conf',
+                                "fileBase64":base64.b64encode(natfileconf.encode('ascii'))
+                            }
+                            print(requests.post(i.urlupSetting['apiURL']+"/upload",data=uploadInfo).content)
+                        i.frrConfigcontent=i.frrConfig(i.router_id,self.nodes,i.network4,i.network6)
                         uploadInfo = {
                             "token":token,
-                            "location":wireguardDefaultPath+wgfile['Peer']+'.conf',
-                            "fileBase64":base64.b64encode(wgfile['Config'].encode('ascii'))
+                            "location":frrDefaultPath+'/frr.conf',
+                            "fileBase64":base64.b64encode(i.frrConfigcontent.encode('ascii'))
                         }
                         result=requests.post(i.urlupSetting['apiURL']+"/upload",data=uploadInfo).content
                         print(result)
-                    if self.haveNatcore:
-                        natfileconf=i.natConfig(self.nodes)
-                        uploadInfo = {
+                        # 应用配置
+                        commandInfo = {
                             "token":token,
-                            "location":wireguardDefaultPath+'nat_mesh.conf',
-                            "fileBase64":base64.b64encode(natfileconf.encode('ascii'))
+                            "commandBase64":base64.b64encode(commandsAll.encode('ascii'))
                         }
-                        print(requests.post(i.urlupSetting['apiURL']+"/upload",data=uploadInfo).content)
-                    i.frrConfigcontent=i.frrConfig(i.router_id,self.nodes,i.network4,i.network6)
-                    uploadInfo = {
-                        "token":token,
-                        "location":frrDefaultPath+'/frr.conf',
-                        "fileBase64":base64.b64encode(i.frrConfigcontent.encode('ascii'))
-                    }
-                    result=requests.post(i.urlupSetting['apiURL']+"/upload",data=uploadInfo).content
-                    print(result)
-                    # 应用配置
-                    commandInfo = {
-                        "token":token,
-                        "commandBase64":base64.b64encode(commandsAll.encode('ascii'))
-                    }
-                    result=requests.post(i.urlupSetting['apiURL']+"/apply",data=commandInfo).content
-                    print("Apply result: ",result)
-                    pass
+                        result=requests.post(i.urlupSetting['apiURL']+"/apply",data=commandInfo).content
+                        print("Apply result: ",result)
+                        pass
         return()
-
 
 class corenode:
 
@@ -341,6 +341,7 @@ class corenode:
         self.IPv6Disable=False
         self.urlupSetting = {}
         self.noSystemd=False
+        self.controlMethod_exists= False
 
     def natApply(self):
 
